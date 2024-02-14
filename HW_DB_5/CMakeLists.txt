@@ -4,7 +4,7 @@ set(PostgreSQL_ADDITIONAL_VERSIONS "16")
 
 project(DataBase)
 
-add_subdirectory("C:\\Program Files\\libpqxx-7.8.1" libpqxx-build)
+add_subdirectory("D:\\Projects\\Data_Base\\HW_DB_5\\libpqxx-7.8.1" libpqxx-build)
 include_directories(${CMAKE_SOURCE_DIR}/qpxx)
 
 
