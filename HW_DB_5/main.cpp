@@ -98,13 +98,18 @@ void update_info(pqxx::connection& con) {
 	std::cout << "Enter client ID: ";
 	std::cin >> client_id;
 	if (num == 4) {
-		con.prepare("update_info", "UPDATE phone_number SET phone = $1 WHERE client_id = $2");
+		std::string number;
+		std::cout << "Enter number what you want update: ";
+		std::cin >> number;
+
+		con.prepare("update_info", "UPDATE phone_number SET phone = $1 WHERE client_id = $2 AND phone = $3");
+		transaction.exec_prepared("update_info", new_value, client_id, number);
 	}
 	else {
 		con.prepare("update_info", "UPDATE client_info SET " + column_name + " = $1 WHERE id = $2");
+		transaction.exec_prepared("update_info", new_value, client_id);
 	}
-
-	transaction.exec_prepared("update_info", new_value, client_id); 
+	
 	transaction.commit();
 }
 
@@ -140,11 +145,11 @@ void delete_info(pqxx::connection& con) {
 			std::cout << "Enter number what you want delete: ";
 			std::cin >> number;
 
-			("delete_phone", "DELETE FROM phone_number WHERE phone = $1");
+			con.prepare("delete_phone", "DELETE FROM phone_number WHERE phone = $1");
 			transaction.exec_prepared("delete_phone", number);
 		}
 		else if (column_name == "first_name" || column_name == "last_name" || column_name == "email") {
-			("delete_info", "UPDATE client_info SET " + column_name + " = NULL WHERE id = $1");
+			con.prepare("delete_info", "UPDATE client_info SET " + column_name + " = NULL WHERE id = $1");
 			transaction.exec_prepared("delete_info", client_id);
 		}
 
