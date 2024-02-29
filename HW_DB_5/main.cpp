@@ -22,8 +22,8 @@ void create_table(pqxx::connection &con){
 void add_client(pqxx::connection& con) {
 	pqxx::work trans(con);
 
-	con.prepare("add_client", "INSERT INTO client_info( first_name, last_name, email) VALUES ($1, $2, $3) RETURNING id");
-	con.prepare("insert_phone", "INSERT INTO phone_number(client_id, phone) VALUES($1, $2)");
+	//con.prepare("add_client", "INSERT INTO client_info( first_name, last_name, email) VALUES ($1, $2, $3) RETURNING id");
+	//con.prepare("insert_phone", "INSERT INTO phone_number(client_id, phone) VALUES($1, $2)");
 
 
 	std::cout << "Enter First Name: ";
@@ -60,104 +60,85 @@ void add_client(pqxx::connection& con) {
 		trans.commit();
 	}
 
-void update_info(pqxx::connection& con) {
+void update_info(pqxx::connection& con, std::string& update_column_name) {
 	pqxx::work transaction(con);
 	std::string new_value;
 	int num;
 	int client_id;
 
 	std::cout << "Enter what you want do!" << std::endl;
-		std::cout << "1-Update First Name!" << std::endl;
-		std::cout << "2-Update Last Name!" << std::endl;
-		std::cout << "3-Update Email!" << std::endl;
-		std::cout << "4-Update Phone number!" << std::endl;
-		std::cin >> num;
+	std::cout << "1-Update First Name!" << std::endl;
+	std::cout << "2-Update Last Name!" << std::endl;
+	std::cout << "3-Update Email!" << std::endl;
+	std::cout << "4-Update Phone number!" << std::endl;
+	std::cin >> num;
 
 	std::cout << "Write new value: ";
 	std::cin >> new_value;
 
 	std::string column_name;
-	switch (num) {
-	case 1:
+	if (num == 1) {
 		column_name = "first_name";
-		break;
-	case 2:
+	}
+	else if (num == 2) {
 		column_name = "last_name";
-		break;
-	case 3:
+	}
+	else if (num == 3) {
 		column_name = "email";
-		break;
-	case 4:
+	}
+	else if (num == 4) {
 		column_name = "phone";
-		break;
-	default:
+	}
+	else {
 		std::cerr << "Wrong variant" << std::endl;
 		return;
 	}
 
 	std::cout << "Enter client ID: ";
 	std::cin >> client_id;
+
 	if (num == 4) {
 		std::string number;
 		std::cout << "Enter number what you want update: ";
 		std::cin >> number;
 
-		con.prepare("update_info", "UPDATE phone_number SET phone = $1 WHERE client_id = $2 AND phone = $3");
-		transaction.exec_prepared("update_info", new_value, client_id, number);
+		transaction.exec_prepared("update_info_phone", new_value, client_id, number);
 	}
 	else {
-		con.prepare("update_info", "UPDATE client_info SET " + column_name + " = $1 WHERE id = $2");
-		transaction.exec_prepared("update_info", new_value, client_id);
+		con.prepare("update_info_client", "UPDATE client_info SET " + column_name + " = $1 WHERE id = $2");
+		transaction.exec_prepared("update_info_client", new_value, client_id);
 	}
-	
+
 	transaction.commit();
 }
 
-void delete_info(pqxx::connection& con) {
+void delete_info(pqxx::connection& con, std::string column_name) {
 	pqxx::work transaction(con);
 	int num;
 	int client_id;
 
 	std::cout << "Enter what you want to do:" << std::endl;
 	std::cout << "1 - Delete user" << std::endl;
-	std::cout << "2 - Delete some info of user" << std::endl;
+	std::cout << "2 - Delete phone" << std::endl;
 	std::cin >> num;
 
 	if (num == 1) {
 		std::cout << "Enter client ID: ";
 		std::cin >> client_id;
 
-		con.prepare("delete_user", "DELETE FROM client_info WHERE id = $1");
-
 		transaction.exec_prepared("delete_user", client_id);
-		transaction.commit();
 	}
 	else if (num == 2) {
 		std::cout << "Enter client ID: ";
 		std::cin >> client_id;
 
-		std::cout << "Enter column name to delete info from: ";
-		std::string column_name;
-		std::cin >> column_name;
-
-		if (column_name == "phone") {
 			std::string number;
 			std::cout << "Enter number what you want delete: ";
 			std::cin >> number;
-
-			con.prepare("delete_phone", "DELETE FROM phone_number WHERE phone = $1");
 			transaction.exec_prepared("delete_phone", number);
-		}
-		else if (column_name == "first_name" || column_name == "last_name" || column_name == "email") {
-			con.prepare("delete_info", "UPDATE client_info SET " + column_name + " = NULL WHERE id = $1");
-			transaction.exec_prepared("delete_info", client_id);
 		}
 
 		transaction.commit();
-	}
-	else {
-		std::cout << "Wrong option" << std::endl;
-	}
 }
 
 void find_info(pqxx::connection& con) {
@@ -170,9 +151,8 @@ void find_info(pqxx::connection& con) {
 	std::cout << "1-Find from First Name!" << std::endl;
 	std::cout << "2-Find from Last Name!" << std::endl;
 	std::cout << "3-Find from Email!" << std::endl;
-	std::cout << "4-Find from Phone number!" << std::endl;
+	//std::cout << "4-Find from Phone number!" << std::endl;
 	std::cin >> num;
-
 
 	std::string column_name;
 	switch (num) {
@@ -194,30 +174,32 @@ void find_info(pqxx::connection& con) {
 	}
 	std::cout << "Enter the value to search for: ";
 	std::cin >> search_value;
-	
+
 	std::string query = "SELECT DISTINCT client_info.*, phone_number.phone FROM client_info "
 		"JOIN phone_number ON client_info.id = phone_number.client_id "
-		"WHERE " + column_name +  " = $1 "
+		"WHERE " + column_name + " = $1 "
 		"GROUP BY client_info.id, phone_number.phone";
 	con.prepare("find_info", query);
 
 	pqxx::result res = transaction.exec_prepared("find_info", search_value);
 
-	// пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ
-	for (const auto& row : res) {
-		std::cout << "ID: " << row["id"].as<int>() << std::endl;
-		std::cout << "First Name: " << row["first_name"].as<std::string>() << std::endl;
-		std::cout << "Last Name: " << row["last_name"].as<std::string>() << std::endl;
-		std::cout << "Email: " << row["email"].as<std::string>() << std::endl;
-		std::cout << "Phone Number: " << row["phone"].as<std::string>() << std::endl;
-	}
+	bool first_iteration = true; // Флаг, чтобы определить, что это первая итерация
 
-	transaction.commit();
+	for (const auto& row : res) {
+		if (first_iteration) { // Если это первая итерация, выводим информацию о пользователе
+			std::cout << "ID: " << row["id"].as<int>() << std::endl;
+			std::cout << "First Name: " << row["first_name"].as<std::string>() << std::endl;
+			std::cout << "Last Name: " << row["last_name"].as<std::string>() << std::endl;
+			std::cout << "Email: " << row["email"].as<std::string>() << std::endl;
+
+			first_iteration = false; // Устанавливаем флаг первой итерации в false
+		}
+		transaction.commit();
+	}
 }
 
 
 int main() {
-	//setlocale(LC_ALL, "Russian");
 	SetConsoleCP(CP_UTF8);
 	SetConsoleOutputCP(CP_UTF8);
 	try
@@ -229,24 +211,41 @@ int main() {
 			" user= postgres"
 			" password= 1234"
 		);
+
+		std::string column_name;
+		
+
+		con.prepare("add_client", "INSERT INTO client_info(first_name, last_name, email) VALUES ($1, $2, $3) RETURNING id");
+		con.prepare("insert_phone", "INSERT INTO phone_number(client_id, phone) VALUES($1, $2)");
+		con.prepare("delete_user", "DELETE FROM client_info WHERE id = $1");
+		con.prepare("delete_phone", "DELETE FROM phone_number WHERE phone = $1");
+		con.prepare("update_info_phone", "UPDATE phone_number SET phone = $1 WHERE client_id = $2 AND phone = $3");
+
+		for (std::string column_name : { "first_name", "last_name", "email" }) {
+			con.prepare("update_info_" + column_name, "UPDATE client_info SET " + column_name + " = $1 WHERE id = $2");
+		}
+
+		for (std::string column_name : { "first_name", "last_name", "email" }) {
+			con.prepare("delete_" + column_name, "UPDATE client_info SET " + column_name + " = $1 WHERE id = $2");
+		}
+
 		create_table(con);
 		std::string think;
 
-		std::cout << "Do you Want to do update(write up), delete(write del), add new client(add) or find some info(find): " << std::endl;
+		std::cout << "Do you Want to do update(write up), delete(write del), add new client(add) or find some info(find) or find num (find_num): " << std::endl;
 		std::cin >> think;
 		if (think == "up") {
-			update_info(con);
+			update_info(con, column_name);
 		}
 		else if (think == "add") {
 			add_client(con);
 		}
 		else if (think == "del") {
-			delete_info(con);
+			delete_info(con, column_name);
 		}
 		else if (think == "find") {
 			find_info(con);
 		}
-
 		else {
 			std::cout << "you don't want change the info or add new client" << std::endl;
 		}
