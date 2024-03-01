@@ -22,10 +22,6 @@ void create_table(pqxx::connection &con){
 void add_client(pqxx::connection& con) {
 	pqxx::work trans(con);
 
-	//con.prepare("add_client", "INSERT INTO client_info( first_name, last_name, email) VALUES ($1, $2, $3) RETURNING id");
-	//con.prepare("insert_phone", "INSERT INTO phone_number(client_id, phone) VALUES($1, $2)");
-
-
 	std::cout << "Enter First Name: ";
 	std::string first_name;
 	std::cin >> first_name;
@@ -151,7 +147,7 @@ void find_info(pqxx::connection& con) {
 	std::cout << "1-Find from First Name!" << std::endl;
 	std::cout << "2-Find from Last Name!" << std::endl;
 	std::cout << "3-Find from Email!" << std::endl;
-	//std::cout << "4-Find from Phone number!" << std::endl;
+	std::cout << "4-Find from Phone number!" << std::endl;
 	std::cin >> num;
 
 	std::string column_name;
@@ -196,6 +192,19 @@ void find_info(pqxx::connection& con) {
 		}
 		transaction.commit();
 	}
+	std::cout << "Email: ";
+	for (const auto& row : res) {
+		std::string phone_numbers_str = row["phone"].as<std::string>();
+		std::istringstream iss(phone_numbers_str);
+		std::vector<std::string> phone_numbers_vec{ std::istream_iterator<std::string>{iss},
+												   std::istream_iterator<std::string>{} };
+
+
+		for (int i = 0; i < phone_numbers_vec.size(); ++i) {
+			std::cout << phone_numbers_vec[i] << ' ';
+		}
+		transaction.commit();
+	}
 }
 
 
@@ -221,18 +230,16 @@ int main() {
 		con.prepare("delete_phone", "DELETE FROM phone_number WHERE phone = $1");
 		con.prepare("update_info_phone", "UPDATE phone_number SET phone = $1 WHERE client_id = $2 AND phone = $3");
 
-		for (std::string column_name : { "first_name", "last_name", "email" }) {
-			con.prepare("update_info_" + column_name, "UPDATE client_info SET " + column_name + " = $1 WHERE id = $2");
-		}
 
 		for (std::string column_name : { "first_name", "last_name", "email" }) {
+			con.prepare("update_info_" + column_name, "UPDATE client_info SET " + column_name + " = $1 WHERE id = $2");
 			con.prepare("delete_" + column_name, "UPDATE client_info SET " + column_name + " = $1 WHERE id = $2");
 		}
 
 		create_table(con);
 		std::string think;
 
-		std::cout << "Do you Want to do update(write up), delete(write del), add new client(add) or find some info(find) or find num (find_num): " << std::endl;
+		std::cout << "Do you Want to do update(write up), delete(write del), add new client(add) or find some info(find): " << std::endl;
 		std::cin >> think;
 		if (think == "up") {
 			update_info(con, column_name);
